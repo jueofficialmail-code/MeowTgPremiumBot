@@ -1,71 +1,70 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+import os
+from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
-# သင့် Bot Token ကို ဤနေရာတွင် ထည့်ပါ
-TOKEN = "8150364428:AAEHU8koxGo6Sp_M6JAMFDeRkCgwdh_HBGo" 
+# 🤖 Bot Token ကို Environment Variable ကနေ ရယူခြင်း
+# (Render မှာ Setting ထည့်ထားတဲ့ 'BOT_TOKEN' ကို ယူသုံးတာပါ)
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# /start command ကို ကိုင်တွယ်မည့် function
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """အသုံးပြုသူက /start command ပေးသောအခါ message ပြန်ပို့ခြင်း"""
-    
-    # ၁။ ပြသလိုသော စာသား (TEX)
-    # MarkdownV2 ကို အသုံးပြုပြီး စာလုံးထူ, စာလုံးစောင်း တွေ ထည့်နိုင်ပါတယ်။
-    # သင်္ချာဖော်မြူလာများအတွက် LaTeX rendering လုပ်တဲ့ နည်းလမ်းကို သီးခြားရှာဖွေရပါမယ်။ 
-    # Telegram ရဲ့ built-in message မှာတော့ 'TEX' ကို တိုက်ရိုက် render လုပ်လို့မရပါဘူး။
-    # ဤဥပမာတွင် စာသားကို အလေးပေးဖော်ပြရန် MarkdownV2 ကို သုံးထားပါသည်။
-    message_text = (
-        "**🎉 ကြိုဆိုပါတယ်၊ ကျွန်မ Bot ရဲ့ စမ်းသပ်စာသားပါ**\n\n"
-        "ဒီနေရာမှာ သင်လိုချင်တဲ့ *TEX formula* ကို ရိုးရိုးစာသား (သို့မဟုတ်) "
-        "ပုံအဖြစ် ပြောင်းလဲပြီး ထည့်သွင်းနိုင်ပါတယ်:\n"
-        "ဥပမာ: `E=mc^2` သို့မဟုတ် $\frac{1}{\sqrt{2\\pi}}$\n\n"
-        "အောက်က **ခလုတ်လေးတွေ** ကို စမ်းကြည့်ပါဦး။"
-    )
-    
-    # ၂။ Button (Inline Keyboard) များ
-    # အတန်းလိုက် ခလုတ်နှစ်ခု ထည့်ထားပါသည်။
-    keyboard = [
-        [
-            InlineKeyboardButton("✨ ရွေးစရာ (က)", callback_data='option_a'),
-            InlineKeyboardButton("🔗 Google သို့", url='https://www.google.com')
-        ],
-        [InlineKeyboardButton("✅ ရွေးစရာ (ခ)", callback_data='option_b')]
-    ]
+# Render Web Service ရဲ့ URL ကို Environment Variable ကနေ ရယူခြင်း
+# Render က 'RENDER_EXTERNAL_URL' ကို သူ့အလိုလို သတ်မှတ်ပေးပါတယ်
+RENDER_URL = os.environ.get("RENDER_EXTERNAL_URL") 
+PORT = int(os.environ.get("PORT", 8080)) # Render က သုံးမယ့် Port
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+# 💬 /start command အတွက် Function
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/start command ကို ဖြေကြားခြင်း။"""
+    await update.message.reply_text("မင်္ဂလာပါ ကျွန်မ။ ကျွန်တော်က GitHub, Render, နဲ့ UptimeRobot ကိုသုံးပြီး run ထားတဲ့ Bot ပါ။ ဘယ်လို ကူညီရမလဲ။")
 
-    # ၃။ ပုံ (Image) ပို့ခြင်း
-    # သင်အသုံးပြုလိုသော ပုံ၏ URL သို့မဟုတ် Telegram file ID
-    image_url = "သင့်_ပုံ_URL_ဒီနေရာမှာ_ထည့်ပါ" # ဥပမာ: "https://picsum.photos/400/200"
-
-    # ပုံကို အရင်ပို့ပါ
-    # ပုံနဲ့အတူ caption (စာတန်း) လည်း ပို့နိုင်ပါတယ်။
-    await update.message.reply_photo(
-        photo=image_url,
-        caption="🖼️ ဒါက သင်တောင်းဆိုထားတဲ့ **ပုံ** ဖြစ်ပါတယ်"
-    )
-    
-    # ၄။ ပုံရဲ့အောက်မှာ ခလုတ်တွေပါတဲ့ မက်ဆေ့ခ်ျကို ထပ်ပို့ပါ
-    # ပုံနဲ့ ခလုတ်တွေကို တစ်ခုတည်းမှာ ပို့ချင်ရင်တော့ caption ထဲမှာ ခလုတ်ထည့်ရပါမယ်။
-    # ဒီဥပမာမှာတော့ ပုံကို အရင်ပို့ပြီး၊ ခလုတ်ပါတဲ့ စာသားကို နောက်မှ ပို့ထားပါတယ်။
-    await update.message.reply_text(
-        text=message_text, 
-        reply_markup=reply_markup,
-        parse_mode='MarkdownV2'
-    )
+# 🩺 /ping command အတွက် Function (Bot ရှင်သန်နေမနေ စစ်ဆေးရန်)
+async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Bot ရှင်သန်နေမနေ စစ်ဆေးခြင်း။"""
+    await update.message.reply_text("Pong! ကျွန်တော် အလုပ်လုပ်နေပါတယ်။")
 
 def main() -> None:
-    """Bot ကို စတင်အလုပ်လုပ်စေခြင်း"""
-    # Application builder ကို အသုံးပြုပြီး Bot ကို တည်ဆောက်ပါ။
-    application = Application.builder().token(TOKEN).build()
+    """Bot ကို စတင် run ရန်။"""
+    if not BOT_TOKEN or not RENDER_URL:
+        print("❌ BOT_TOKEN သို့မဟုတ် RENDER_EXTERNAL_URL ကို မတွေ့ပါ။ Environment Variables ကို စစ်ဆေးပါ။")
+        return
 
-    # /start command ကို start function နဲ့ ချိတ်ဆက်ပါ
-    application.add_handler(CommandHandler("start", start))
+    # Application ကို Build လုပ်ခြင်း
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    # Bot ကို Polling စနစ်နဲ့ စတင် Run ပါ (Server မလိုအပ်ပါ)
-    # Webhook ကို အသုံးပြုလိုပါက၊ hosting အတွက် ပြင်ဆင်ရပါမည်။
-    print("Bot စတင် အလုပ်လုပ်နေပါပြီ...")
-    application.run_polling(poll_interval=3)
+    # Command Handler များကို ထည့်သွင်းခြင်း
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("ping", ping_command))
+
+    # Webhook ကို သတ်မှတ်ခြင်း
+    # Webhook path ကို 'telegram-updates' လို့ သတ်မှတ်ထားပါတယ်။
+    webhook_url = f"{RENDER_URL}/telegram-updates"
+    
+    # Render မှာ run ဖို့ Webhook ကို Set လုပ်ပြီး Local Server ကို စောင့်ဆိုင်းစေခြင်း
+    print(f"✅ Webhook URL: {webhook_url} ကို သတ်မှတ်နေပါသည်...")
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path="telegram-updates",
+        webhook_url=webhook_url,
+    )
+    print(f"✅ Bot စတင် အလုပ်လုပ်နေပါပြီ (Port: {PORT})")
+    
+    # UpTimeRobot အတွက် Server ကို စောင့်ဆိုင်းနေစေရန် Dummy HTTP Server ကို run ခြင်း
+    # ဒါက UpTimeRobot က Ping လာတဲ့အခါ 200 OK ပြန်ပေးဖို့ဖြစ်ပါတယ်။
+    def run_dummy_server():
+        class HealthCheckHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"Bot is healthy!")
+
+        httpd = HTTPServer(('0.0.0.0', 8080), HealthCheckHandler)
+        httpd.serve_forever()
+
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+
 
 if __name__ == "__main__":
     main()
-  
+
