@@ -4,9 +4,9 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 # Environment Variable များမှ Token နှင့် URL ကို ရယူခြင်း
 # Render မှာ Environment Variables အဖြစ် သတ်မှတ်ပေးရပါမယ်။
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-# Render က ပေးမယ့် URL (ဥပမာ: https://your-bot-name.onrender.com)
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL") 
+TOKEN = os.environ.get("8150364428:AAEHU8koxGo6Sp_M6JAMFDeRkCgwdh_HBGo")
+# Render က ပေးမယ့် URL (ဥပမာ: url)
+WEBHOOK_URL = os.environ.get("https://meowtgpremiumbot.onrender.com") 
 # Render က ပေးမယ့် Port
 PORT = int(os.environ.get("PORT", 5000))
 
