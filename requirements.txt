@@ -1,1 +1,2 @@
 python-telegram-bot[web]
+uvicorn  # uvicorn ကို ထပ်ထည့်ရပါမယ်။
