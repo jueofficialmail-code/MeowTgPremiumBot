@@ -1,11 +1,14 @@
 import logging
+import os # os module ကို import လုပ်ရန် ထည့်သွင်းပေးလိုက်သည်
 from flask import Flask, request, jsonify
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler, ConversationHandler, filters, MessageHandler
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler, ConversationHandler
 
 # --- Setup & Configuration ---
 # Your Bot Token (Replace with your actual token)
+# သင့် Bot Token သည် ဤနေရာတွင် အဆင်သင့် ဖြစ်နေပြီ။
 BOT_TOKEN = "8150364428:AAHM0W8gHR1Z6ouaSUwEVWJefB-1d1o8XlQ" 
+RENDER_URL = "YOUR_RENDER_SERVICE_URL" # *** ဤနေရာတွင် သင့် Render Service URL ကို ထည့်ရန် လိုအပ်သည် ***
 
 # Enable logging
 logging.basicConfig(
@@ -16,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 # --- Quiz Data ---
 # Quiz မေးခွန်းများ၊ ရွေးချယ်စရာများ နဲ့ အဖြေမှန်များ
-# 
 QUIZ_DATA = [
     {
         "question": "ပုဂံပြည်ကို ဘယ်မင်းက စတင်ထူထောင်ခဲ့တာလဲ။",
@@ -43,7 +45,6 @@ QUIZ_START, QUIZ_QUESTION = range(2)
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """စတင်မိတ်ဆက်ပြီး Quiz ကို စဖို့ တောင်းဆိုသည်။"""
     user = update.effective_user
-    # ကျွန်မ လို့ ပြန်ဖြေပေးရန်
     await update.message.reply_text(
         f"ဟိုင်း **{user.first_name}**၊ ကျွန်မ Quiz Bot က ကြိုဆိုပါတယ်။ အတာကဏ္ဍကို စတင်ချင်ပါသလား။",
         reply_markup=InlineKeyboardMarkup([
@@ -62,7 +63,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Inline Keyboard မှ ခလုတ်နှိပ်ခြင်းကို ကိုင်တွယ်သည်။"""
     query = update.callback_query
-    await query.answer() # Callback ကို ချက်ချင်း အသိပေးသည်။
+    await query.answer() 
     
     data = query.data
     
@@ -73,15 +74,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         
     elif data == 'about':
         await query.edit_message_text("ကျွန်မ က Telegram ပေါ်မှာ အတာမေးခွန်းတွေ မေးဖို့ ရေးထားတဲ့ ဘော့တစ်ခု ဖြစ်ပါတယ်။")
-        return ConversationHandler.END # စကားဝိုင်းကို အဆုံးသတ်သည်။
+        return ConversationHandler.END 
         
     elif data.startswith('answer_'):
-        # အဖြေကို စစ်ဆေးသည်။
         answer = data.split('_')[1]
         index = context.user_data.get('current_question_index', 0) - 1
         
         if index < 0 or index >= len(QUIZ_DATA):
-            # အခြေအနေမမှန်လျှင်
             await query.edit_message_text("မေးခွန်းရှာမတွေ့ပါ။ /start ကို ပြန်နှိပ်ပါ။")
             return ConversationHandler.END
 
@@ -93,7 +92,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         else:
             feedback = f"❌ မှားသွားပါတယ်။ အဖြေမှန်က **{current_quiz['correct_answer']}** ဖြစ်ပါတယ်။"
             
-        # အဖြေစစ်ပြီးနောက် feedback ပေးပြီး နောက်မေးခွန်း ဆက်မေးသည်။
         await query.edit_message_text(f"{current_quiz['question']}\n\nအဖြေ: {answer}\n\n{feedback}")
         
         return await send_question(query, context)
@@ -107,31 +105,25 @@ async def send_question(update_or_query, context: ContextTypes.DEFAULT_TYPE) -> 
     index = context.user_data.get('current_question_index', 0)
     
     if index < len(QUIZ_DATA):
-        # မေးခွန်းဆက်မေးရန်
         quiz_item = QUIZ_DATA[index]
         question = quiz_item["question"]
         options = quiz_item["options"]
         
-        # Options များကို Inline Keyboard အဖြစ် ပြောင်းလဲသည်။
         keyboard = []
         for option in options:
-            # option ကို callback_data မှာ encode လုပ်ပြီးပို့သည်။
             callback_data = f'answer_{option}'
             keyboard.append(InlineKeyboardButton(option, callback_data=callback_data))
             
-        # တစ်တန်းမှာ 2 ခု ထားရန်
         keyboard_rows = [keyboard[i:i + 2] for i in range(0, len(keyboard), 2)]
         
         reply_markup = InlineKeyboardMarkup(keyboard_rows)
         
         if hasattr(update_or_query, 'message'):
-            # Command ကနေ စတင်လျှင်
             await update_or_query.message.reply_text(
                 f"📝 **မေးခွန်း {index + 1}/{len(QUIZ_DATA)}:**\n{question}",
                 reply_markup=reply_markup
             )
         else:
-            # Callback ကနေ စတင်လျှင် (Message ကို ပြောင်းလဲပါ)
             await update_or_query.edit_message_text(
                 f"📝 **မေးခွန်း {index + 1}/{len(QUIZ_DATA)}:**\n{question}",
                 reply_markup=reply_markup
@@ -141,30 +133,36 @@ async def send_question(update_or_query, context: ContextTypes.DEFAULT_TYPE) -> 
         return QUIZ_QUESTION
         
     else:
-        # မေးခွန်း အားလုံး ပြီးဆုံးလျှင်
         score = context.user_data.get('score', 0)
         total = len(QUIZ_DATA)
-        await update_or_query.message.reply_text(
-            f"🎉 အတာကဏ္ဍ ပြီးဆုံးပါပြီ။\n\n**ကျွန်မ** ရဲ့ ရမှတ်က **{score}/{total}** ဖြစ်ပါတယ်။\n\n/start ကိုနှိပ်ပြီး အသစ်ပြန်စနိုင်ပါတယ်။"
-        )
-        # အချက်အလက်များကို ရှင်းပစ်ပါ။
+        # update_or_query မှာ query object ဖြစ်နေရင် message.reply_text ကို ခေါ်လို့မရဘူး။
+        # ဒါကြောင့် query ဖြစ်မဖြစ် စစ်ပြီး edit_message_text ကို သုံးရမည်။
+        if hasattr(update_or_query, 'message'):
+            await update_or_query.message.reply_text(
+                f"🎉 အတာကဏ္ဍ ပြီးဆုံးပါပြီ။\n\n**ကျွန်မ** ရဲ့ ရမှတ်က **{score}/{total}** ဖြစ်ပါတယ်။\n\n/start ကိုနှိပ်ပြီး အသစ်ပြန်စနိုင်ပါတယ်။"
+            )
+        else:
+            await update_or_query.edit_message_text(
+                f"🎉 အတာကဏ္ဍ ပြီးဆုံးပါပြီ။\n\n**ကျွန်မ** ရဲ့ ရမှတ်က **{score}/{total}** ဖြစ်ပါတယ်။\n\n/start ကိုနှိပ်ပြီး အသစ်ပြန်စနိုင်ပါတယ်။"
+            )
+
         context.user_data.clear() 
         return ConversationHandler.END
 
-# --- Main Application Setup ---
+# --- Application Setup ---
 
-def main() -> None:
-    """ဘော့ကို စတင်သည်။"""
-    # ApplicationBuilder ကို အသုံးပြုပြီး Bot ကို တည်ဆောက်သည်။
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
-    
-    # Conversation Handler ကို သတ်မှတ်သည်။
-    # Entry Points: စကားဝိုင်းစတင်ရန်
+application = ApplicationBuilder().token(BOT_TOKEN).build()
+app = Flask(__name__)
+# Render မှ ပေးသော Port ကို ယူပါ (Default 10000)
+PORT = int(os.environ.get('PORT', '10000')) 
+
+
+def setup_handlers(app_instance) -> None:
+    """Handlers များကို ApplicationBuilder instance တွင် ထည့်သွင်းသည်"""
     entry_points = [
         CommandHandler("start", start_command)
     ]
 
-    # States: စကားဝိုင်းအတွင်း အခြေအနေများ
     states = {
         QUIZ_START: [
             CallbackQueryHandler(button_callback, pattern='^(start_quiz|about)$')
@@ -174,46 +172,53 @@ def main() -> None:
         ]
     }
     
-    # Fallback: ဘာမှမကိုင်တွယ်နိုင်သောအခါ
     fallbacks = [
-        CommandHandler("start", start_command) # start ကို ပြန်နှိပ်နိုင်ရန်
+        CommandHandler("start", start_command)
     ]
     
     quiz_handler = ConversationHandler(
         entry_points=entry_points,
         states=states,
         fallbacks=fallbacks,
-        allow_reentry=True # စကားဝိုင်းထဲမှာ ပြန်ဝင်လို့ရရန်
+        allow_reentry=True
     )
     
-    # Handlers များ ထည့်သွင်းသည်။
-    application.add_handler(quiz_handler)
-    application.add_handler(CommandHandler("help", help_command))
+    app_instance.add_handler(quiz_handler)
+    app_instance.add_handler(CommandHandler("help", help_command))
 
-    # Polling ဖြင့် စတင် run သည်။ (Webhooks အစား)
-    logger.info("Bot is starting with Polling...")
-    application.run_polling(poll_interval=3)
+# --- Flask Webhook Handlers ---
 
-# --- Flask for Webhooks (Optional but Included) ---
+@app.route('/')
+def index():
+    """Render Health Check အတွက်"""
+    return "MaooTgPremiumBot is running and ready for webhooks!"
 
-app = Flask(__name__)
+@app.route('/webhook', methods=['POST'])
+async def webhook_handler():
+    """Telegram ကနေ ပို့လာတဲ့ Webhook Updates တွေကို ကိုင်တွယ်ဖို့"""
+    if request.method == "POST":
+        # application.process_update() ကို အသုံးပြုပြီး Update ကို ကိုင်တွယ်သည်။
+        update = Update.de_json(request.get_json(force=True), application.bot)
+        await application.process_update(update)
+    return "ok"
 
-# Polling အစား Webhooks သုံးလိုလျှင် အောက်ပါတို့ကို ဖြုတ်ပါ။
-# @app.route('/')
-# def index():
-#     return "Telegram Bot is running!"
-
-# @app.route('/webhook', methods=['POST'])
-# async def webhook():
-#     update = Update.de_json(request.get_json(force=True), application.bot)
-#     await application.update_queue.put(update)
-#     return jsonify({'status': 'ok'})
-
-# Flask ကို run လျှင် `if __name__ == '__main__':` ထဲက `main()` ကို ပိတ်ပါ။
-# ပြီးလျှင် `application.run_polling()` အစား Webhooks setup ကို ပြင်ဆင်ပါ။
+# --- Main Run Block ---
 
 if __name__ == '__main__':
-    main()
-    # Flask ကို run လိုပါက အောက်ပါအတိုင်း run နိုင်ပါသည်။
-    # app.run(host='0.0.0.0', port=5000)
+    setup_handlers(application)
+    
+    # Webhook URL ကို တစ်ခါတည်း သတ်မှတ်သည်။
+    # RENDER_URL ကို သင့်ကိုယ်ပိုင် URL ဖြင့် အစားထိုးရန် လိုအပ်ပါသည်။
+    if RENDER_URL != "https://meowtgpremiumbot.onrender.com":
+        webhook_url = f"{RENDER_URL}/webhook"
+        logger.info(f"Setting webhook to: {webhook_url}")
+        # Blocking function ကို run နိုင်ရန် asyncio ကို သုံးနိုင်သည်။ 
+        # သို့သော် gunicorn သည် Bot ကို run မည်ဆိုလျှင်၊ ဒီနေရာကို ဖြုတ်ပြီး 
+        # browser ဖြင့် setWebhook ကို ကိုယ်တိုင် ပြုလုပ်ခြင်းက ပိုလုံခြုံပါသည်။
+        # try/except ဖြင့် setWebhook ကို run နိုင်ပါသည်။
+    
+    # Gunicorn ဖြင့် run လျှင် Flask application `app` ကိုသာ run မည်။
+    # Flask app ကို debug mode ဖြင့် local မှာ run လိုလျှင် အောက်ပါအတိုင်း run နိုင်ပါသည်။
+    # app.run(host='0.0.0.0', port=PORT, debug=True)
+    logger.info("Bot is ready. Please run with gunicorn on Render.")
 
