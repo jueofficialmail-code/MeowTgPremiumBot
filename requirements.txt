@@ -1,3 +1,5 @@
 python-telegram-bot
-openai
-
+google-generativeai
+flask
+pymongo
+certifi
